@@ -8,15 +8,14 @@ graph = {
  'G' : []
 }
 def DLS(start,goal,path,level,maxD):
-    print('nCurrent level-->',level)
     path.append(start)
     if start == goal:
-        print("Goal test successful")
+       
         return path
-    print('Goal node testing failed')
+   
     if level==maxD:
         return False
-    print('nExpanding the current node',start)
+     
     for child in graph[start]:
         if DLS(child,goal,path,level+1,maxD):
             return path
