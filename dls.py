@@ -1,38 +1,35 @@
-from collections import defaultdict 
-  
-class Graph: 
-    def _init_(self,vertices): 
-        self.V = vertices              
-        self.graph = defaultdict(list) 
-   
-    def addEdge(self,u,v):      
-        self.graph[u].append(v)
-
-def DLS(self,source,target,maxDepth):    
-        if source == target : return True
-  
-        if maxDepth <= 0 : return False      
-  	   # recursively traversing the graph while searching
-        for i in self.graph[source]: 
-                if(self.DLS(i, target, maxDepth-1)):     
-                    return True
+graph = {
+ 'A' : ['B','C'],
+ 'B' : ['D', 'E'],
+ 'C' : ['F', 'G'],
+ 'D' : [],
+ 'E' : [],
+ 'F' : [],
+ 'G' : []
+}
+def DLS(start,goal,path,level,maxD):
+    print('nCurrent level-->',level)
+    path.append(start)
+    if start == goal:
+        print("Goal test successful")
+        return path
+    print('Goal node testing failed')
+    if level==maxD:
         return False
- 
-g = Graph(9)# creating the graph 
-g.addEdge(0, 1) 
-g.addEdge(0, 2) 
-g.addEdge(1, 3) 
-g.addEdge(1, 4) 
-g.addEdge(2, 5) 
-g.addEdge(2, 6) 
-g.addEdge(3,7)
-g.addEdge(3,8)
-  
-target = 3
-maxDepth = 3
-source = 0
-  
-if g.DLS(source, target, maxDepth) == True:
-    print(f"Target {target} is reachable from source {source} within max depth {maxDepth}")
-else: 
-    print(f"Target {target} is NOT reachable from source {source} within max depth {maxDepth}")
+    print('nExpanding the current node',start)
+    for child in graph[start]:
+        if DLS(child,goal,path,level+1,maxD):
+            return path
+        path.pop()
+    return False
+start = 'A'
+goal = input('Enter the goal node:-')
+maxD = int(input("Enter the maximum depth limit:-"))
+print()
+path = list()
+res = DLS(start,goal,path,0,maxD)
+if(res):
+    print("Path to goal node available")
+    print("Path",path)
+else:
+    print("No path available for the goal node in given depth limit")
