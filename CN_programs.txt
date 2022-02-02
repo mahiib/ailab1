@@ -1,0 +1,879 @@
+ ###### Program - 3 Wired Program
+ 
+ 
+set ns [new Simulator]
+set tf [open p3.tr w]
+$ns trace-all $tf
+
+set nf [open p3.nam w]
+$ns namtrace-all $nf
+
+$ns color 1 Blue
+$ns color 2 Red
+
+$ns rtproto DV
+
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+set n3 [$ns node]
+set n4 [$ns node]
+set n5 [$ns node]
+
+$ns duplex-link $n0 $n1 2Mb 2ms DropTail
+$ns duplex-link $n0 $n2 2Mb 2ms DropTail
+#$ns duplex-link $n1 $n2 2Mb 2ms DropTail
+$ns duplex-link $n1 $n4 2Mb 2ms DropTail
+$ns duplex-link $n2 $n3 2Mb 2ms DropTail
+$ns duplex-link $n4 $n5 2Mb 2ms DropTail
+$ns duplex-link $n3 $n5 2Mb 2ms DropTail
+#$ns duplex-link $n4 $n3 2Mb 2ms DropTail
+
+$ns duplex-link-op $n0 $n1 orient up-right
+$ns duplex-link-op $n0 $n2 orient down-right
+$ns duplex-link-op $n1 $n4 orient right
+$ns duplex-link-op $n2 $n3 orient right
+$ns duplex-link-op $n4 $n5 orient down-right
+$ns duplex-link-op $n3 $n5 orient up-right
+
+$ns queue-limit $n0 $n1 10
+set tcp0 [new Agent/TCP]
+$ns attach-agent $n0 $tcp0
+
+set tcp1 [new Agent/TCPSink]
+$ns attach-agent $n4 $tcp1
+
+$ns connect $tcp0 $tcp1
+
+set ftp [new Application/FTP]
+
+$ftp attach-agent $tcp0
+
+$tcp0 set fid_ 2
+
+$ns at 0.5 "$ftp start"
+$ns at 5.0 "finish"
+
+$ns rtmodel-at 1.0 down $n1 $n4
+$ns rtmodel-at 3.0 up $n1 $n4
+
+proc finish {} {
+	global ns tf nf 
+	$ns flush-trace
+	close $tf
+	close $nf
+	exec nam p3.nam &
+	exit 0
+}
+
+$ns run
+
+
+
+####################################
+### Program - 4 Wired 
+
+
+set ns [new Simulator]
+set tf [open p4.tr w]
+
+$ns trace-all $tf
+set nf [open p4.nam w]
+$ns namtrace-all $nf
+
+$ns color 1 Blue
+
+set n0 [$ns node]
+set n1 [$ns node]
+
+$n0 label "Server"
+$n1 label "Client"
+
+$ns duplex-link $n0 $n1 10Mb 2ms DropTail
+
+$ns queue-limit $n0 $n1 10
+
+set tcp0 [new Agent/TCP]
+$ns attach-agent $n0 $tcp0
+
+set tcp1 [new Agent/TCPSink]
+$ns attach-agent $n1 $tcp1
+
+$ns connect $tcp0 $tcp1
+
+$tcp0 set packetSize_ 1500
+$tcp0 set fid_ 1
+
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp0
+
+$ns at 0.5 "$ftp start"
+$ns at 5.0 "finish"
+
+proc finish {} {
+	global ns tf nf
+	$ns flush-trace
+	close $tf
+	close $nf
+	exec nam p4.nam &
+	exit 0
+}
+
+$ns run
+
+@@@@@ AwkScript Program
+
+BEGIN {
+	tcp_count=0;
+	udp_count=0;
+}
+{
+	if($1 == "d" && $5 == "tcp")
+		tcp_count++;
+		
+	if($1 == "d" && $5 == "cbr")
+		udp_count++;
+}
+END {
+	printf("Number of Packet Dropped in TCP %d\n", tcp_count);
+	printf("Number of Packet Dropped in UDP %d\n", udp_count);
+}
+
+
+########################################################
+
+### Program - 5 Wired Program
+
+set ns [new Simulator -multicast on]
+set tf [open p5.tr w]
+$ns trace-all $tf
+set nf [open p5.nam w]
+$ns namtrace-all $nf
+
+#$ns color 1 Red
+#$ns color 2 Green
+
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+set n3 [$ns node]
+set n4 [$ns node]
+set n5 [$ns node]
+set n6 [$ns node]
+set n7 [$ns node]
+
+$ns duplex-link $n0 $n1 5MB 2ms DropTail
+$ns duplex-link $n1 $n2 5MB 2ms DropTail
+$ns duplex-link $n2 $n3 5MB 2ms DropTail
+$ns duplex-link $n3 $n4 5MB 2ms DropTail
+$ns duplex-link $n3 $n7 5MB 2ms DropTail
+$ns duplex-link $n4 $n5 5MB 2ms DropTail
+$ns duplex-link $n4 $n6 5MB 2ms DropTail
+
+set mproto DM
+set mrthandle [$ns mrtproto $mproto {}]
+
+set group1 [Node allocaddr]
+set group2 [Node allocaddr]
+
+set udp1 [new Agent/UDP]
+$ns attach-agent $n0 $udp1
+$udp1 set dst_addr_ $group1
+$udp1 set dst_port_ 0
+set cbr1 [new Application/Traffic/CBR]
+$cbr1 attach-agent $udp1
+
+set udp2 [new Agent/UDP]
+$ns attach-agent $n1 $udp2
+$udp2 set dst_addr_ $group2
+$udp2 set dst_port_ 0
+set cbr2 [new Application/Traffic/CBR]
+$cbr2 attach-agent $udp2
+
+set r1 [new Agent/Null]
+$ns attach-agent $n2 $r1
+$ns at 1.0 "$n2 join-group $r1 $group1"
+
+set r2 [new Agent/Null]
+$ns attach-agent $n3 $r2
+$ns at 1.5 "$n3 join-group $r2 $group1"
+
+set r3 [new Agent/Null]
+$ns attach-agent $n4 $r3
+$ns at 2.0 "$n4 join-group $r3 $group1"
+
+set r4 [new Agent/Null]
+$ns attach-agent $n5 $r4
+$ns at 2.5 "$n5 join-group $r4 $group2"
+
+set r5 [new Agent/Null]
+$ns attach-agent $n6 $r5
+$ns at 3.0 "$n6 join-group $r5 $group2"
+
+set r6 [new Agent/Null]
+$ns attach-agent $n7 $r6
+$ns at 3.5 "$n7 join-group $r6  $group2"
+
+$ns at 4.0 "$n2 leave-group $r1 $group1"
+$ns at 4.5 "$n3 leave-group $r2 $group1"
+$ns at 5.0 "$n4 leave-group $r3 $group1"
+$ns at 5.5 "$n5 leave-group $r4 $group1"
+$ns at 6.0 "$n6 leave-group $r5 $group1"
+$ns at 6.5 "$n7 leave-group $r6 $group1"
+
+$ns at 0.3 "$cbr1 start"
+$ns at 0.5 "$cbr2 start"
+
+$ns at 8.0 "finish"
+
+proc finish {} {
+	global ns nf tf
+	$ns flush-trace
+	close $tf
+	close $nf
+	exec nam p5.nam &
+	exit 0
+}
+
+$ns run
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+****** Wireless Programs ******
+
+# Program - 1 
+
+### Step 1 - Initialize Variables
+# 1. Creating a Channel
+
+set val(chan) Channel/WirelessChannel
+
+# 2. Setting up Propogation Medium
+
+set val(prop) Propagation/TwoRayGround
+
+# 3. Setting up Physical Layer 
+
+set val(netif) Phy/WirelessPhy
+
+# 4. Setting Mac layer Protocol
+
+set val(mac) Mac/802_11
+
+# 5. Queue type being used
+
+set val(ifq) Queue/DropTail/PriQueue
+
+# 6. Setting Cross-Link Layer interface
+
+set val(ll) LL 
+
+# 7. Setting Antenna type
+
+set val(ant) Antenna/OmniAntenna
+
+# 8. Setting Queue Length
+# ifqlen - interface Queue length
+
+# After exceeding 50 - packets start getting Dropped
+set val(ifqlen) 50 
+
+# 9. Setting No.of Nodes
+
+# 2 no.of nodes
+set val(nn) 2 
+
+# 10. Setting up routing Protocol
+
+set val(rp) AODV
+
+# 11. Setting Up Dimensions in meters
+
+set val(x) 500
+set val(y) 500
+
+
+### step 2 - Creating the Simulator
+set ns [new Simulator]
+
+### step 3 - Creating tr and nam file
+set tf [open WLp1.tr w]
+$ns trace-all $tf
+
+set nf [open WLp1.nam w]
+$ns namtrace-all-wireless $nf $val(x) $val(y)
+
+### step 4 - Creating topography
+
+# 1. Setting up topography type
+set topo [new Topography]
+$topo load_flatgrid $val(x) $val(y)
+
+### Step 5 - Creating GOD Object - Managing to all the nodes in the network
+create-god $val(nn) 
+
+### Step - 7 Creating the channel (and also config the channel)
+set channel1 [new $val(chan)]
+
+# 1. Config the channel
+$ns node-config -adhocRouting $val(rp) \
+	-llType $val(ll) \
+	-macType $val(mac) \
+	-ifqType $val(ifq) \
+	-ifqLen $val(ifqlen) \
+	-antType $val(ant) \
+	-propType $val(prop) \
+	-phyType $val(netif) \
+	-topoInstance $topo \
+	-agentTrace ON \
+	-macTrace ON \
+	-movementTrace ON \
+	-channel $channel1 \
+	
+### Step 6 - Creating the Nodes
+
+set n0 [$ns node]
+set n1 [$ns node]
+
+# Disabling the random motion of nodes
+$n0 random-motion 0
+$n1 random-motion 0
+
+# Initial Position of the nodes
+$ns initial_node_pos $n0 20
+$ns initial_node_pos $n1 20
+
+# To set the Axis of x,y of all the nodes
+$n0 set X_ 10.0
+$n0 set Y_ 20.0 
+$n0 set Z_ 0.0
+
+$n1 set X_ 10.0
+$n1 set Y_ 20.0 
+$n1 set Z_ 0.0
+
+# To set the mobility of the nodes
+
+#          node         dest       speed
+$ns at 1.0 "$n0 setdest 310.0 10.0 25.0"
+$ns at 1.0 "$n0 setdest 10.0 310.0 25.0"
+
+# Attaching the Agents for nodes
+
+set tcp [new Agent/TCP]
+set sink [new Agent/TCPSink]
+
+$ns attach-agent $n0 $tcp
+$ns attach-agent $n1 $sink
+
+$ns connect $tcp $sink
+
+# Run the Application ( Generating the Traffic )
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+
+# Finish time
+$ns at 1.2 "$ftp start"
+$ns at 18.0 "finish"
+
+proc finish {} {
+	global ns tf nf
+	$ns flush-trace 
+	close $tf
+	close $nf
+	exec nam WLp1.nam &
+	exit 0
+}
+
+puts "starting simulation"
+$ns run
+
+
+#################################################
+
+# Program - 2 
+
+### Step 1 - Initialize Variables
+# 1. Creating a Channel
+
+set val(chan) Channel/WirelessChannel
+
+# 2. Setting up Propogation Medium
+
+set val(prop) Propagation/TwoRayGround
+
+# 3. Setting up Physical Layer 
+
+set val(netif) Phy/WirelessPhy
+
+# 4. Setting Mac layer Protocol
+
+set val(mac) Mac/802_11
+
+# 5. Queue type being used
+
+set val(ifq) Queue/DropTail/PriQueue
+
+# 6. Setting Cross-Link Layer interface
+
+set val(ll) LL 
+
+# 7. Setting Antenna type
+
+set val(ant) Antenna/OmniAntenna
+
+# 8. Setting Queue Length
+# ifqlen - interface Queue length
+
+# After exceeding 50 - packets start getting Dropped
+set val(ifqlen) 50 
+
+# 9. Setting No.of Nodes
+
+# 3 no.of nodes
+set val(nn) 3 
+
+# 10. Setting up routing Protocol
+
+set val(rp) DSDV
+
+# 11. Setting Up Dimensions in meters
+
+set val(x) 500
+set val(y) 500
+
+### step 2 - Creating the Simulator
+set ns [new Simulator]
+
+### step 3 - Creating tr and nam file
+set tf [open WLp2.tr w]
+$ns trace-all $tf
+
+set nf [open WLp2.nam w]
+$ns namtrace-all-wireless $nf $val(x) $val(y)
+
+### step 4 - Creating topography
+
+# 1. Setting up topography type
+set topo [new Topography]
+$topo load_flatgrid $val(x) $val(y)
+
+### Step 5 - Creating GOD Object - Managing to all the nodes in the network
+create-god $val(nn) 
+
+### Step - 7 Creating the channel (and also config the channel)
+set channel1 [new $val(chan)]
+
+# 1. Config the channel
+$ns node-config -adhocRouting $val(rp) \
+	-llType $val(ll) \
+	-macType $val(mac) \
+	-ifqType $val(ifq) \
+	-ifqLen $val(ifqlen) \
+	-antType $val(ant) \
+	-propType $val(prop) \
+	-phyType $val(netif) \
+	-topoInstance $topo \
+	-agentTrace ON \
+	-macTrace ON \
+	-movementTrace ON \
+	-channel $channel1 \
+	
+### Step 6 - Creating the Nodes
+
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+
+# Disabling the random motion of nodes
+$n0 random-motion 0
+$n1 random-motion 0
+$n2 random-motion 0
+
+# Initial Position of the nodes
+$ns initial_node_pos $n0 20
+$ns initial_node_pos $n1 20
+$ns initial_node_pos $n2 20
+
+# To set the Axis of x,y of all the nodes
+$n0 set X_ 10.0
+$n0 set Y_ 20.0 
+$n0 set Z_ 0.0
+
+$n1 set X_ 10.0
+$n1 set Y_ 20.0 
+$n1 set Z_ 0.0
+
+$n1 set X_ 10.0
+$n1 set Y_ 20.0 
+$n1 set Z_ 0.0
+
+# To set the mobility of the nodes
+
+#          node         dest       speed
+$ns at 1.0 "$n0 setdest 310.0 10.0 25.0"
+$ns at 1.5 "$n1 setdest 10.0 310.0 25.0"
+$ns at 2.0 "$n2 setdest 250.0 20.0 25.0"
+
+# Attaching the Agents for nodes
+
+set tcp [new Agent/TCP]
+set sink [new Agent/TCPSink]
+
+$ns attach-agent $n0 $tcp
+$ns attach-agent $n1 $sink
+
+$ns connect $tcp $sink
+
+# Run the Application ( Generating the Traffic )
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+
+# Finish time
+$ns at 1.2 "$ftp start"
+$ns at 18.0 "finish"
+
+proc finish {} {
+	global ns tf nf
+	$ns flush-trace 
+	close $tf
+	close $nf
+	exec nam WLp2.nam &
+	exit 0
+}
+
+puts "starting simulation"
+$ns run
+
+
+
+############################################
+
+# Program - 3 
+
+### Step 1 - Initialize Variables
+# 1. Creating a Channel
+
+set val(chan) Channel/WirelessChannel
+
+# 2. Setting up Propogation Medium
+
+set val(prop) Propagation/TwoRayGround
+
+# 3. Setting up Physical Layer 
+
+set val(netif) Phy/WirelessPhy
+
+# 4. Setting Mac layer Protocol
+
+set val(mac) Mac/802_11
+
+# 5. Queue type being used
+
+set val(ifq) Queue/DropTail/PriQueue
+
+# 6. Setting Cross-Link Layer interface
+
+set val(ll) LL 
+
+# 7. Setting Antenna type
+
+set val(ant) Antenna/OmniAntenna
+
+# 8. Setting Queue Length
+# ifqlen - interface Queue length
+
+# After exceeding 50 - packets start getting Dropped
+set val(ifqlen) 50 
+
+# 9. Setting No.of Nodes
+
+# 3 no.of nodes
+set val(nn) 3 
+
+# 10. Setting up routing Protocol
+
+set val(rp) DSDV
+
+# 11. Setting Up Dimensions in meters
+
+set val(x) 500
+set val(y) 500
+
+### step 2 - Creating the Simulator
+set ns [new Simulator]
+
+### step 3 - Creating tr and nam file
+set tf [open WLp3.tr w]
+$ns trace-all $tf
+
+set nf [open WLp3.nam w]
+$ns namtrace-all-wireless $nf $val(x) $val(y)
+
+### step 4 - Creating topography
+
+# 1. Setting up topography type
+set topo [new Topography]
+$topo load_flatgrid $val(x) $val(y)
+
+### Step 5 - Creating GOD Object - Managing to all the nodes in the network
+create-god $val(nn) 
+
+### Step - 7 Creating the channel (and also config the channel)
+set channel1 [new $val(chan)]
+
+# 1. Config the channel
+$ns node-config -adhocRouting $val(rp) \
+	-llType $val(ll) \
+	-macType $val(mac) \
+	-ifqType $val(ifq) \
+	-ifqLen $val(ifqlen) \
+	-antType $val(ant) \
+	-propType $val(prop) \
+	-phyType $val(netif) \
+	-topoInstance $topo \
+	-agentTrace ON \
+	-macTrace ON \
+	-movementTrace ON \
+	-channel $channel1 \
+	-incomingErrProc "uniformErr1" \
+	-outgoingErrProc "uniformErr1" 
+	
+
+proc uniform {} {
+	set err [new ErrorModel]
+	$err unit pkt
+	$err set rate_ 0.3
+	return $err
+}		
+	
+### Step 6 - Creating the Nodes
+
+set n0 [$ns node]
+set n1 [$ns node]
+set n2 [$ns node]
+
+# Disabling the random motion of nodes
+$n0 random-motion 0
+$n1 random-motion 0
+$n2 random-motion 0
+
+# Initial Position of the nodes
+$ns initial_node_pos $n0 20
+$ns initial_node_pos $n1 20
+$ns initial_node_pos $n2 20
+
+# To set the Axis of x,y of all the nodes
+$n0 set X_ 10.0
+$n0 set Y_ 20.0 
+$n0 set Z_ 0.0
+
+$n1 set X_ 10.0
+$n1 set Y_ 20.0 
+$n1 set Z_ 0.0
+
+$n1 set X_ 10.0
+$n1 set Y_ 20.0 
+$n1 set Z_ 0.0
+
+# To set the mobility of the nodes
+
+#          node         dest       speed
+$ns at 1.0 "$n0 setdest 310.0 10.0 25.0"
+$ns at 1.5 "$n1 setdest 10.0 310.0 25.0"
+$ns at 2.0 "$n2 setdest 250.0 20.0 25.0"
+
+# Attaching the Agents for nodes
+
+set tcp [new Agent/TCP]
+set sink [new Agent/TCPSink]
+
+$ns attach-agent $n0 $tcp
+$ns attach-agent $n1 $sink
+
+$ns connect $tcp $sink
+
+# Run the Application ( Generating the Traffic )
+set ftp [new Application/FTP]
+$ftp attach-agent $tcp
+
+# Finish time
+$ns at 1.2 "$ftp start"
+$ns at 18.0 "finish"
+
+proc finish {} {
+	global ns tf nf
+	$ns flush-trace 
+	close $tf
+	close $nf
+	exec nam WLp3.nam &
+	exit 0
+}
+
+puts "starting simulation"
+$ns run
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
